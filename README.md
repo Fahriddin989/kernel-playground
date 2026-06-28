@@ -38,4 +38,30 @@ Screenshots and evidence images, when needed, can be stored under:
 docs/images/
 ```
 
+## 3. Testing and Development Environment
+
+The project was developed and tested using the environment provided by `kernel-playground`. This environment is designed for Linux kernel development and allows kernel modules to be built and tested without loading experimental code directly on the host system.
+
+The development workflow used two isolated layers:
+
+1. A Podman container for building the kernel module.
+2. A QEMU virtual machine for loading and testing the kernel module.
+
+The module was built inside the container environment. This container includes the required build tools, kernel headers, compiler, and project files needed to compile the out-of-tree kernel module.
+
+The actual module execution was done inside a QEMU VM. The compiled `.ko` kernel module was copied or made available to the VM and loaded inside the VM kernel using `insmod`. All runtime tests, including HTTP traffic detection and blacklist-based packet dropping, were performed inside this virtual machine.
+
+This setup is important because Linux kernel modules run inside kernel space. A bug in kernel-space code can crash the running kernel. By testing inside a QEMU VM, the experiment is isolated from the host operating system. If the module causes a crash, only the VM is affected, while the host system and development container remain safe.
+
+In this project, the QEMU VM used a virtual network configuration where HTTP traffic reached the VM through port forwarding. During testing, the observed VM-side network values were:
+
+```text id="dlba6o"
+VM IP address:        10.0.2.15
+QEMU source address:  10.0.2.10
+HTTP port:            80
+```
+
+The source IP address `10.0.2.10` was later added to the runtime blacklist to verify that the module could drop HTTP traffic from a selected source.
+
+
 The final delivery is intended to be available from the `main` branch of the forked repository.
