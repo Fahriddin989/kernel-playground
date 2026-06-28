@@ -49,7 +49,7 @@ The development workflow used two isolated layers:
 
 The module was built inside the container environment. This container includes the required build tools, kernel headers, compiler, and project files needed to compile the out-of-tree kernel module.
 
-The actual module execution was done inside a QEMU VM. The compiled `.ko` kernel module was copied or made available to the VM and loaded inside the VM kernel using `insmod`. All runtime tests, including HTTP traffic detection and blacklist-based packet dropping, were performed inside this virtual machine.
+The actual module execution was done inside a QEMU VM. The compiled `.ko` kernel module was mounted to the VM and loaded inside the VM kernel using `insmod`. All runtime tests, including HTTP traffic detection and blacklist-based packet dropping, were performed inside this virtual machine.
 
 This setup is important because Linux kernel modules run inside kernel space. A bug in kernel-space code can crash the running kernel. By testing inside a QEMU VM, the experiment is isolated from the host operating system. If the module causes a crash, only the VM is affected, while the host system and development container remain safe.
 
