@@ -1,24 +1,23 @@
-# Kernel Playground — M3 HTTP Packet Logger Delivery
+# M3 HTTP Packet Logger and Blacklist Kernel Module
 
-## M3 Project Documentation
+## 1. Project Overview
 
-This fork contains my Software Networks M3 project:
+This project implements an out-of-tree Linux kernel module for the M3 Software Defined Networking assignment. The goal of the project is to inspect network traffic at kernel level, detect HTTP connections, log accepted packets, and support a runtime blacklist mechanism for blocking selected source IP addresses.
 
-**M3 HTTP Packet Logger and Blacklist Kernel Module**
+The implemented module is called `snf_lkm`. It uses the Linux Netfilter framework to inspect IPv4 TCP packets before they are delivered to the local system. When a TCP packet is addressed to destination port `80`, the module classifies it as HTTP traffic. If the source IP address is not blacklisted, the packet is accepted and a kernel log message is produced. If the source IP address exists in the runtime blacklist, the packet is dropped and the drop event is logged.
 
-The implementation is an out-of-tree Linux kernel module that detects IPv4 TCP HTTP traffic on port 80 using the Linux Netfilter subsystem. It logs accepted HTTP connections and supports a runtime source-IP blacklist through `/proc/snf_blacklist`. HTTP traffic from a blacklisted source IP is dropped inside the kernel module.
+The blacklist is controlled at runtime through a `/proc` interface:
 
-Main implementation file:
+```text
+/proc/snf_blacklist
+```
+
+This means the module does not need to be recompiled or reloaded every time the blacklist changes. A user can write an IP address into `/proc/snf_blacklist`, and the module will immediately use that address to decide whether HTTP traffic should be accepted or dropped.
+
+The main implementation file is:
 
 ```text
 kernel/modules/snf_lkm.c
 ```
 
-Project documentation:
-
-* [Full M3 documentation](docs/m3-http-packet-logger.md)
-* [Results and evidence](docs/m3-http-packet-logger.md#results-and-evidence)
-* [Reproduction steps](docs/m3-http-packet-logger.md#reproduction-steps)
-* [Development and design notes](docs/m3-http-packet-logger.md#design-and-development-notes)
-* [Safety and isolation](docs/m3-http-packet-logger.md#safety-and-isolation)
-
+The module was built inside the provided container-based development environment and tested inside a QEMU virtual machine. This is important because kernel modules run with high privileges inside the kernel. Testing the module inside a VM keeps the host system safe: if the module crashes the kernel, only the virtual machine is affected, not the host operating system.
