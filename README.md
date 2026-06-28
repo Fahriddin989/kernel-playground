@@ -62,6 +62,3 @@ HTTP port:            80
 ```
 
 The source IP address `10.0.2.10` was later added to the runtime blacklist to verify that the module could drop HTTP traffic from a selected source.
-
-
-The final delivery is intended to be available from the `main` branch of the forked repository.
