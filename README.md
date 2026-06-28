@@ -24,13 +24,7 @@ The module was built inside the provided container-based development environment
 
 ## 2. Repository Information
 
-The work was developed inside the `kernel-playground` repository, which is the required repository for Linux kernel/module projects in this assignment.
-
-The working repository path inside the development environment is:
-
-```text
-/opt/kernel-playground
-```
+The project repository is located on the Ubuntu host at `~/kernel-playground`. For building and testing, the repository is mounted inside the Podman development container at `/opt/kernel-playground`. Most build commands in this project are executed from inside the container using the `/opt/kernel-playground` path.
 
 The main implementation file of this project is:
 
