@@ -1,5 +1,45 @@
 ## 1. M3 — HTTP Packet Logger - Project Overview
 
+## Table of Contents
+
+* [1. Project Overview](#1-project-overview)
+* [2. Testing and Safety Environment](#2-testing-and-safety-environment)
+* [3. Kernel Module Design](#3-kernel-module-design)
+* [4. Implementation Explanation](#4-implementation-explanation)
+
+  * [4.1 Header Files](#41-header-files)
+  * [4.2 HTTP Port Constant](#42-http-port-constant)
+  * [4.3 Network Namespace Data](#43-network-namespace-data)
+  * [4.4 Netfilter Callback Function](#44-netfilter-callback-function)
+  * [4.5 Checking That the Packet Exists](#45-checking-that-the-packet-exists)
+  * [4.6 Checking the IPv4 Header](#46-checking-the-ipv4-header)
+  * [4.7 Checking the TCP Protocol](#47-checking-the-tcp-protocol)
+  * [4.8 Handling IPv4 Header Length](#48-handling-ipv4-header-length)
+  * [4.9 Reading the TCP Header](#49-reading-the-tcp-header)
+  * [4.10 Detecting HTTP Traffic](#410-detecting-http-traffic)
+  * [4.11 Logging Packet Information](#411-logging-packet-information)
+  * [4.12 Accepting Packets](#412-accepting-packets)
+  * [4.13 Netfilter Hook Configuration](#413-netfilter-hook-configuration)
+  * [4.14 Registering the Hook](#414-registering-the-hook)
+  * [4.15 Unregistering the Hook](#415-unregistering-the-hook)
+  * [4.16 Module Load Function](#416-module-load-function)
+  * [4.17 Module Exit Function](#417-module-exit-function)
+  * [4.18 Module Metadata](#418-module-metadata)
+* [5. Build Steps](#5-build-steps)
+* [6. Run and Test Steps](#6-run-and-test-steps)
+
+  * [6.1 Start the QEMU VM](#61-start-the-qemu-vm)
+  * [6.2 Load the Kernel Module Inside the VM](#62-load-the-kernel-module-inside-the-vm)
+  * [6.3 Start an HTTP Server Inside the VM](#63-start-an-http-server-inside-the-vm)
+  * [6.4 Send HTTP Traffic From Outside the VM](#64-send-http-traffic-from-outside-the-vm)
+  * [6.5 Check the Kernel Log Inside the VM](#65-check-the-kernel-log-inside-the-vm)
+  * [6.6 Remove the Module](#66-remove-the-module)
+* [7. Results and Evidence](#7-results-and-evidence)
+* [8. Screenshots](#8-screenshots)
+* [9. Development Notes](#9-development-notes)
+* [10. Final Repository State](#10-final-repository-state)
+
+
 This project implements **M3 — HTTP Packet Logger**, a Linux kernel module developed inside the `kernel-playground` repository.
 
 The goal of this module is to inspect network traffic at kernel level and detect HTTP packets. HTTP traffic normally uses TCP destination port `80`, so the module checks IPv4 TCP packets and identifies packets whose destination port is `80`.
