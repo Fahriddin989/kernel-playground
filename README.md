@@ -1,4 +1,4 @@
-## 1. M3 — HTTP Packet Logger - Project Overview
+# M3 — HTTP Packet Logger Kernel Module
 
 ## Table of Contents
 
@@ -39,6 +39,7 @@
 * [9. Development Notes](#9-development-notes)
 * [10. Final Repository State](#10-final-repository-state)
 
+## 1. Project Overview
 
 This project implements **M3 — HTTP Packet Logger**, a Linux kernel module developed inside the `kernel-playground` repository.
 
