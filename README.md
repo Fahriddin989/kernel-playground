@@ -35,8 +35,8 @@
   * [6.5 Check the Kernel Log Inside the VM](#65-check-the-kernel-log-inside-the-vm)
   * [6.6 Remove the Module](#66-remove-the-module)
 * [7. Results and Evidence](#7-results-and-evidence)
-* [8. Development Notes](#9-development-notes)
-* [9. Final Repository State](#10-final-repository-state)
+* [8. Development Notes](#8-development-notes)
+* [9. Final Repository State](#9-final-repository-state)
 
 ## 1. Project Overview
 
@@ -596,13 +596,13 @@ The module should be loaded inside the VM, not directly on the host machine.
 
 From the container/repository environment, start the QEMU virtual machine using the project VM tools.
 
-The exact command depends on the `kernel-playground` VM setup, but the important point is that the VM must boot successfully and provide a shell where the module can be loaded.
+From the repository VM directory, start the QEMU virtual machine using the project VM script or command provided by the `kernel-playground` setup. The important point is that the VM must boot successfully and provide a shell where the module can be loaded.
 
 The VM is configured with port forwarding so that port `10080` outside the VM forwards to port `80` inside the VM.
 
 This means:
 
-```text id="qwhw9n"
+```text
 Outside VM: 127.0.0.1:10080
         ↓
 Inside VM:  port 80
@@ -715,19 +715,19 @@ This result confirms that the module correctly:
 
 The source IP address in the test was:
 
-```text id="kwu6z3"
+```text
 10.0.2.10
 ```
 
 The destination IP address in the test was:
 
-```text id="vxacju"
+```text
 10.0.2.15
 ```
 
 The destination port was:
 
-```text id="pca4vy"
+```text
 80
 ```
 
@@ -742,14 +742,14 @@ This behavior is expected and acceptable for this project because the Basic and 
 
 The module does not block or modify the traffic. The HTTP request still reaches the server normally.
 
-]
+
 ## 8. Development Notes
 
 During development, the goal was to keep the module simple, understandable, and aligned with the selected M3 requirements.
 
 The final version focuses on two main tasks:
 
-```text id="2mbss9"
+```text
 1. Detect HTTP packets on TCP destination port 80.
 2. Log detected HTTP packet information to the kernel log.
 ```
@@ -758,7 +758,7 @@ The module was intentionally designed as a packet logger, not as a firewall.
 
 For this reason, the module always returns:
 
-```c id="3yho7x"
+```c
 return NF_ACCEPT;
 ```
 
@@ -770,7 +770,7 @@ Another important design decision is the use of QEMU for testing. Kernel modules
 
 The module also follows the original `kernel-playground` style by using per-network-namespace operations. This is why the module uses:
 
-```c id="ye2oq6"
+```c
 register_pernet_subsys(&lkm_netns_ops);
 ```
 
@@ -786,7 +786,7 @@ The final project is kept in the root of the `kernel-playground` repository.
 
 The main implementation file is:
 
-```text id="e7wlek"
+```text
 kernel/modules/snf_lkm.c
 ```
 
@@ -794,7 +794,7 @@ This file contains the complete `snf_lkm` kernel module for M3 HTTP packet loggi
 
 The root README file is:
 
-```text id="y0o2bw"
+```text
 README.md
 ```
 
