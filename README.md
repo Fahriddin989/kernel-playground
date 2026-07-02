@@ -610,89 +610,96 @@ Inside VM:  port 80
 
 ### 6.2 Load the Kernel Module Inside the VM
 
-Inside the QEMU VM, load the compiled module:
+Inside the QEMU VM, the compiled kernel module was loaded from the shared directory mounted at `/mnt/shared`:
 
-```bash id="xrxmtl"
+```bash
 insmod /mnt/shared/snf_lkm.ko
 ```
 
-After loading the module, check the kernel log:
+The kernel log showed that the module was loaded successfully:
 
-```bash id="hz8m22"
-dmesg | tail -n 20
+```text
+[  614.979874] snf_lkm: IPv4 HTTP packet logger registered
+[  614.989106] snf_lkm: HTTP packet logger module loaded
 ```
 
-Expected log message:
-
-```text id="i0dqsw"
-snf_lkm: HTTP packet logger module loaded
-snf_lkm: IPv4 HTTP packet logger registered
-```
-
-This confirms that the module was loaded and that the Netfilter hook was registered.
+This confirms that the out-of-tree kernel module was inserted into the running VM kernel and that the Netfilter hook was registered.
 
 ### 6.3 Start an HTTP Server Inside the VM
 
-To generate HTTP traffic, an HTTP server must be running inside the QEMU VM on port `80`.
+To generate HTTP traffic, a simple BusyBox HTTP server was started inside the QEMU VM on port `80`.
 
-For example, a simple BusyBox HTTP server can be used:
-
-```bash id="7w8zdj"
-busybox httpd -f -p 80
+```bash
+mkdir -p /www
+echo "hello from vm" > /www/index.html
+pkill httpd 2>/dev/null
+busybox httpd -p 80 -h /www
 ```
 
-If the server is already running, this step does not need to be repeated.
+The server listens on port `80` inside the VM. The QEMU VM was started with port forwarding from the container to the VM:
+
+```text
+hostfwd=tcp::10080-:80
+```
+
+This means that an HTTP request sent to `127.0.0.1:10080` from outside the VM reaches port `80` inside the VM.
 
 ### 6.4 Send HTTP Traffic From Outside the VM
 
-From outside the VM, send an HTTP request to the forwarded port:
+From the Podman container, an HTTP request was sent to the forwarded port:
 
-```bash id="tev3l3"
-curl http://127.0.0.1:10080
+```bash
+curl http://127.0.0.1:10080/
 ```
 
-Because of QEMU port forwarding, this request reaches port `80` inside the VM.
-
-The packet enters the VM as IPv4 TCP traffic with destination port `80`. The kernel module detects this packet and logs it.
+This request reaches the HTTP server inside the VM. Since the packet is IPv4 TCP traffic with destination port `80`, the kernel module detects it as HTTP traffic.
 
 ### 6.5 Check the Kernel Log Inside the VM
 
-Inside the QEMU VM, check the kernel log again:
+Inside the QEMU VM, the kernel log was checked again:
 
-```bash id="7heypc"
+```bash
 dmesg | tail -n 20
 ```
 
-Expected result:
+The output showed that the module detected the HTTP packets:
 
-```text id="ju2ag6"
-snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=36386 dport=80
+```text
+[  614.979874] snf_lkm: IPv4 HTTP packet logger registered
+[  614.989106] snf_lkm: HTTP packet logger module loaded
+[  641.270059] snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=37488 dport=80
+[  641.280291] snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=37488 dport=80
+[  641.287799] snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=37488 dport=80
+[  641.328260] snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=37488 dport=80
+[  641.344338] snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=37488 dport=80
+[  641.354110] snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=37488 dport=80
 ```
 
-The exact source port can be different each time because it is chosen dynamically for the TCP connection.
+In this result:
+
+- `src=10.0.2.10` is the QEMU host-side address.
+- `dst=10.0.2.15` is the VM address.
+- `dport=80` confirms that the detected packets are HTTP traffic.
+- `sport=37488` is the temporary TCP source port chosen for this connection.
+
+The source port can be different each time the test is repeated.
 
 ### 6.6 Remove the Module
 
-After testing, the module can be removed from the VM:
+After testing, the module was removed from the VM:
 
-```bash id="p0ynhz"
+```bash
 rmmod snf_lkm
 ```
 
-Then check the kernel log:
+The kernel log confirmed that the Netfilter hook was unregistered and that the module cleanup function completed successfully:
 
-```bash id="hiyqmg"
-dmesg | tail -n 20
+```text
+[  855.128674] snf_lkm: netfilter hook unregistered
+[  855.170077] snf_lkm: HTTP packet logger module unloaded
 ```
 
-Expected log message:
-
-```text id="0jkc61"
-snf_lkm: netfilter hook unregistered
-snf_lkm: HTTP packet logger module unloaded
-```
-
-This confirms that the module cleanup function ran correctly and that the Netfilter hook was removed.
+This confirms that the module was removed cleanly and no longer hooks IPv4 HTTP traffic.
 
 ## 7. Results and Evidence
 
