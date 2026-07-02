@@ -614,7 +614,7 @@ Inside VM:  port 80
 Inside the QEMU VM, load the compiled module:
 
 ```bash id="xrxmtl"
-insmod snf_lkm.ko
+insmod /mnt/shared/snf_lkm.ko
 ```
 
 After loading the module, check the kernel log:
@@ -699,39 +699,6 @@ This confirms that the module cleanup function ran correctly and that the Netfil
 
 After loading the module inside the QEMU virtual machine and sending HTTP traffic to the VM, the module successfully detected HTTP packets on destination port `80`.
 
-The module was loaded with:
-
-```bash id="glbvpe"
-insmod snf_lkm.ko
-```
-
-The kernel log showed that the module was loaded and that the Netfilter hook was registered:
-
-```text id="ec7r5w"
-snf_lkm: IPv4 HTTP packet logger registered
-snf_lkm: HTTP packet logger module loaded
-```
-
-Then an HTTP request was sent from outside the VM using:
-
-```bash id="tvyiia"
-curl http://127.0.0.1:10080
-```
-
-This request reached port `80` inside the QEMU VM because of QEMU port forwarding.
-
-Inside the VM, the kernel log was checked using:
-
-```bash id="m5z7ak"
-dmesg | tail -n 20
-```
-
-The observed kernel log output was:
-
-```text id="tni7yj"
-snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=36386 dport=80
-```
-
 This result confirms that the module correctly:
 
 1. received packets through the Netfilter hook
@@ -769,71 +736,8 @@ This behavior is expected and acceptable for this project because the Basic and 
 
 The module does not block or modify the traffic. The HTTP request still reaches the server normally.
 
-## 8. Screenshots
-
-Screenshots can be stored inside the repository under:
-
-```text id="9dhuyw"
-docs/images/
-```
-
-The README keeps all explanations in one file, but screenshots can be stored separately as evidence images.
-
-Suggested evidence screenshots:
-
-### 8.1 Module Build
-
-This screenshot should show that the module was compiled successfully and that the `.ko` file was produced.
-
-```markdown id="776zw5"
-![Successful module build](docs/images/module-build.png)
-```
-
-### 8.2 Module Loaded Inside QEMU VM
-
-This screenshot should show the module being loaded inside the QEMU virtual machine using `insmod`.
-
-```markdown id="4k6hod"
-![Module loaded inside QEMU VM](docs/images/module-loaded.png)
-```
-
-### 8.3 HTTP Request Sent to the VM
-
-This screenshot should show the test HTTP request sent from outside the VM:
-
-```bash id="mmta27"
-curl http://127.0.0.1:10080
-```
-
-Markdown placeholder:
-
-```markdown id="886ubz"
-![HTTP request to forwarded port](docs/images/http-curl-test.png)
-```
-
-### 8.4 Kernel Log Showing Detected HTTP Packet
-
-This screenshot should show the kernel log output from:
-
-```bash id="j8km82"
-dmesg | tail -n 20
-```
-
-Expected evidence:
-
-```text id="q7xja9"
-snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=36386 dport=80
-```
-
-Markdown placeholder:
-
-```markdown id="4w1gq9"
-![HTTP packet detected in kernel log](docs/images/http-packet-detected.png)
-```
-
-These screenshots provide visual evidence that the module was built, loaded, tested, and that HTTP packet detection worked correctly.
-
-## 9. Development Notes
+]
+## 8. Development Notes
 
 During development, the goal was to keep the module simple, understandable, and aligned with the selected M3 requirements.
 
@@ -870,7 +774,7 @@ This design makes the module fit better with the repository style while still ke
 
 Overall, the project demonstrates how a Linux kernel module can use Netfilter to inspect IPv4 TCP traffic and log HTTP packet information at kernel level.
 
-## 10. Final Repository State
+## 9. Final Repository State
 
 The final project is kept in the root of the `kernel-playground` repository.
 
@@ -889,47 +793,5 @@ README.md
 ```
 
 This README is the main documentation for the project. It contains the project overview, environment explanation, design notes, implementation explanation, build steps, test steps, results, and evidence.
-
-No separate documentation file is used for this project. In particular, this project does not require a separate file such as:
-
-```text id="dw9aep"
-docs/m3-http-packet-logger.md
-```
-
-Screenshots and evidence images can be stored in:
-
-```text id="tu1m6e"
-docs/images/
-```
-
-The expected final repository structure for this delivery is:
-
-```text id="xdd415"
-kernel-playground/
-├── README.md
-├── kernel/
-│   └── modules/
-│       └── snf_lkm.c
-└── docs/
-    └── images/
-        ├── module-build.png
-        ├── module-loaded.png
-        ├── http-curl-test.png
-        └── http-packet-detected.png
-```
-
-The active development branch is:
-
-```text id="2d8gwl"
-m3-http-packet-logger
-```
-
-After the README, source code, and screenshots are complete, this branch can be pushed to my fork:
-
-```text id="c4ffje"
-https://github.com/Almutaz97/kernel-playground
-```
-
-Later, the branch can be merged into the `main` branch of my fork.
 
 The final project demonstrates a simple Linux Netfilter kernel module that detects IPv4 TCP HTTP packets on destination port `80`, logs packet information to the kernel log, and accepts all packets without blocking or modifying traffic.
