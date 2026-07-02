@@ -1,0 +1,14 @@
+# Ignore all id_rsa files
+*.id_rsa*
+
+# Ignore bzImage files
+bzImage
+
+# Ignore all .img files
+*.img
+
+# Ignore pid files
+*.pid
+
+bookworm/
+shared/
