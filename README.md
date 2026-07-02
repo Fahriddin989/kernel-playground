@@ -1,29 +1,12 @@
-<<<<<<< HEAD
 # M3 — HTTP Packet Logger Kernel Module
 
 ## Table of Contents
-=======
-# M3 HTTP Packet Logger and Blacklist Kernel Module
-
-## Project documentation
-
-- [Project overview](#project-overview)
-- [Safety and isolation](#safety-and-isolation)
-- [Implemented module](#implemented-module)
-- [Design notes](#design-notes)
-- [Build steps](#build-steps)
-- [VM test setup](#vm-test-setup)
-- [How to reproduce the experiments](#how-to-reproduce-the-experiments)
-- [Results and evidence](#results-and-evidence)
-- [Modified files](#modified-files)
->>>>>>> ee5b9a8 (Add HTTP netfilter blacklist module)
 
 * [1. Project Overview](#1-project-overview)
 * [2. Testing and Safety Environment](#2-testing-and-safety-environment)
 * [3. Kernel Module Design](#3-kernel-module-design)
 * [4. Implementation Explanation](#4-implementation-explanation)
 
-<<<<<<< HEAD
   * [4.1 Header Files](#41-header-files)
   * [4.2 HTTP Port Constant](#42-http-port-constant)
   * [4.3 Network Namespace Data](#43-network-namespace-data)
@@ -52,9 +35,8 @@
   * [6.5 Check the Kernel Log Inside the VM](#65-check-the-kernel-log-inside-the-vm)
   * [6.6 Remove the Module](#66-remove-the-module)
 * [7. Results and Evidence](#7-results-and-evidence)
-* [8. Screenshots](#8-screenshots)
-* [9. Development Notes](#9-development-notes)
-* [10. Final Repository State](#10-final-repository-state)
+* [8. Development Notes](#8-development-notes)
+* [9. Final Repository State](#9-final-repository-state)
 
 ## 1. Project Overview
 
@@ -614,13 +596,13 @@ The module should be loaded inside the VM, not directly on the host machine.
 
 From the container/repository environment, start the QEMU virtual machine using the project VM tools.
 
-The exact command depends on the `kernel-playground` VM setup, but the important point is that the VM must boot successfully and provide a shell where the module can be loaded.
+From the repository VM directory, start the QEMU virtual machine using the project VM script or command provided by the `kernel-playground` setup. The important point is that the VM must boot successfully and provide a shell where the module can be loaded.
 
 The VM is configured with port forwarding so that port `10080` outside the VM forwards to port `80` inside the VM.
 
 This means:
 
-```text id="qwhw9n"
+```text
 Outside VM: 127.0.0.1:10080
         ↓
 Inside VM:  port 80
@@ -628,126 +610,100 @@ Inside VM:  port 80
 
 ### 6.2 Load the Kernel Module Inside the VM
 
-Inside the QEMU VM, load the compiled module:
+Inside the QEMU VM, the compiled kernel module was loaded from the shared directory mounted at `/mnt/shared`:
 
-```bash id="xrxmtl"
-insmod snf_lkm.ko
+```bash
+insmod /mnt/shared/snf_lkm.ko
 ```
 
-After loading the module, check the kernel log:
+The kernel log showed that the module was loaded successfully:
 
-```bash id="hz8m22"
-dmesg | tail -n 20
+```text
+[  614.979874] snf_lkm: IPv4 HTTP packet logger registered
+[  614.989106] snf_lkm: HTTP packet logger module loaded
 ```
 
-Expected log message:
-
-```text id="i0dqsw"
-snf_lkm: HTTP packet logger module loaded
-snf_lkm: IPv4 HTTP packet logger registered
-```
-
-This confirms that the module was loaded and that the Netfilter hook was registered.
+This confirms that the out-of-tree kernel module was inserted into the running VM kernel and that the Netfilter hook was registered.
 
 ### 6.3 Start an HTTP Server Inside the VM
 
-To generate HTTP traffic, an HTTP server must be running inside the QEMU VM on port `80`.
+To generate HTTP traffic, a simple BusyBox HTTP server was started inside the QEMU VM on port `80`.
 
-For example, a simple BusyBox HTTP server can be used:
-
-```bash id="7w8zdj"
-busybox httpd -f -p 80
+```bash
+mkdir -p /www
+echo "hello from vm" > /www/index.html
+pkill httpd 2>/dev/null
+busybox httpd -p 80 -h /www
 ```
 
-If the server is already running, this step does not need to be repeated.
+The server listens on port `80` inside the VM. The QEMU VM was started with port forwarding from the container to the VM:
+
+```text
+hostfwd=tcp::10080-:80
+```
+
+This means that an HTTP request sent to `127.0.0.1:10080` from outside the VM reaches port `80` inside the VM.
 
 ### 6.4 Send HTTP Traffic From Outside the VM
 
-From outside the VM, send an HTTP request to the forwarded port:
+From the Podman container, an HTTP request was sent to the forwarded port:
 
-```bash id="tev3l3"
-curl http://127.0.0.1:10080
+```bash
+curl http://127.0.0.1:10080/
 ```
 
-Because of QEMU port forwarding, this request reaches port `80` inside the VM.
-
-The packet enters the VM as IPv4 TCP traffic with destination port `80`. The kernel module detects this packet and logs it.
+This request reaches the HTTP server inside the VM. Since the packet is IPv4 TCP traffic with destination port `80`, the kernel module detects it as HTTP traffic.
 
 ### 6.5 Check the Kernel Log Inside the VM
 
-Inside the QEMU VM, check the kernel log again:
+Inside the QEMU VM, the kernel log was checked again:
 
-```bash id="7heypc"
+```bash
 dmesg | tail -n 20
 ```
 
-Expected result:
+The output showed that the module detected the HTTP packets:
 
-```text id="ju2ag6"
-snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=36386 dport=80
+```text
+[  614.979874] snf_lkm: IPv4 HTTP packet logger registered
+[  614.989106] snf_lkm: HTTP packet logger module loaded
+[  641.270059] snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=37488 dport=80
+[  641.280291] snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=37488 dport=80
+[  641.287799] snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=37488 dport=80
+[  641.328260] snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=37488 dport=80
+[  641.344338] snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=37488 dport=80
+[  641.354110] snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=37488 dport=80
 ```
 
-The exact source port can be different each time because it is chosen dynamically for the TCP connection.
+In this result:
+
+- `src=10.0.2.10` is the QEMU host-side address.
+- `dst=10.0.2.15` is the VM address.
+- `dport=80` confirms that the detected packets are HTTP traffic.
+- `sport=37488` is the temporary TCP source port chosen for this connection.
+
+The source port can be different each time the test is repeated.
 
 ### 6.6 Remove the Module
 
-After testing, the module can be removed from the VM:
+After testing, the module was removed from the VM:
 
-```bash id="p0ynhz"
+```bash
 rmmod snf_lkm
 ```
 
-Then check the kernel log:
+The kernel log confirmed that the Netfilter hook was unregistered and that the module cleanup function completed successfully:
 
-```bash id="hiyqmg"
-dmesg | tail -n 20
+```text
+[  855.128674] snf_lkm: netfilter hook unregistered
+[  855.170077] snf_lkm: HTTP packet logger module unloaded
 ```
 
-Expected log message:
-
-```text id="0jkc61"
-snf_lkm: netfilter hook unregistered
-snf_lkm: HTTP packet logger module unloaded
-```
-
-This confirms that the module cleanup function ran correctly and that the Netfilter hook was removed.
+This confirms that the module was removed cleanly and no longer hooks IPv4 HTTP traffic.
 
 ## 7. Results and Evidence
 
 After loading the module inside the QEMU virtual machine and sending HTTP traffic to the VM, the module successfully detected HTTP packets on destination port `80`.
-
-The module was loaded with:
-
-```bash id="glbvpe"
-insmod snf_lkm.ko
-```
-
-The kernel log showed that the module was loaded and that the Netfilter hook was registered:
-
-```text id="ec7r5w"
-snf_lkm: IPv4 HTTP packet logger registered
-snf_lkm: HTTP packet logger module loaded
-```
-
-Then an HTTP request was sent from outside the VM using:
-
-```bash id="tvyiia"
-curl http://127.0.0.1:10080
-```
-
-This request reached port `80` inside the QEMU VM because of QEMU port forwarding.
-
-Inside the VM, the kernel log was checked using:
-
-```bash id="m5z7ak"
-dmesg | tail -n 20
-```
-
-The observed kernel log output was:
-
-```text id="tni7yj"
-snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=36386 dport=80
-```
 
 This result confirms that the module correctly:
 
@@ -759,19 +715,19 @@ This result confirms that the module correctly:
 
 The source IP address in the test was:
 
-```text id="kwu6z3"
+```text
 10.0.2.10
 ```
 
 The destination IP address in the test was:
 
-```text id="vxacju"
+```text
 10.0.2.15
 ```
 
 The destination port was:
 
-```text id="pca4vy"
+```text
 80
 ```
 
@@ -786,77 +742,14 @@ This behavior is expected and acceptable for this project because the Basic and 
 
 The module does not block or modify the traffic. The HTTP request still reaches the server normally.
 
-## 8. Screenshots
 
-Screenshots can be stored inside the repository under:
-
-```text id="9dhuyw"
-docs/images/
-```
-
-The README keeps all explanations in one file, but screenshots can be stored separately as evidence images.
-
-Suggested evidence screenshots:
-
-### 8.1 Module Build
-
-This screenshot should show that the module was compiled successfully and that the `.ko` file was produced.
-
-```markdown id="776zw5"
-![Successful module build](docs/images/module-build.png)
-```
-
-### 8.2 Module Loaded Inside QEMU VM
-
-This screenshot should show the module being loaded inside the QEMU virtual machine using `insmod`.
-
-```markdown id="4k6hod"
-![Module loaded inside QEMU VM](docs/images/module-loaded.png)
-```
-
-### 8.3 HTTP Request Sent to the VM
-
-This screenshot should show the test HTTP request sent from outside the VM:
-
-```bash id="mmta27"
-curl http://127.0.0.1:10080
-```
-
-Markdown placeholder:
-
-```markdown id="886ubz"
-![HTTP request to forwarded port](docs/images/http-curl-test.png)
-```
-
-### 8.4 Kernel Log Showing Detected HTTP Packet
-
-This screenshot should show the kernel log output from:
-
-```bash id="j8km82"
-dmesg | tail -n 20
-```
-
-Expected evidence:
-
-```text id="q7xja9"
-snf_lkm: HTTP packet detected: src=10.0.2.10 dst=10.0.2.15 sport=36386 dport=80
-```
-
-Markdown placeholder:
-
-```markdown id="4w1gq9"
-![HTTP packet detected in kernel log](docs/images/http-packet-detected.png)
-```
-
-These screenshots provide visual evidence that the module was built, loaded, tested, and that HTTP packet detection worked correctly.
-
-## 9. Development Notes
+## 8. Development Notes
 
 During development, the goal was to keep the module simple, understandable, and aligned with the selected M3 requirements.
 
 The final version focuses on two main tasks:
 
-```text id="2mbss9"
+```text
 1. Detect HTTP packets on TCP destination port 80.
 2. Log detected HTTP packet information to the kernel log.
 ```
@@ -865,7 +758,7 @@ The module was intentionally designed as a packet logger, not as a firewall.
 
 For this reason, the module always returns:
 
-```c id="3yho7x"
+```c
 return NF_ACCEPT;
 ```
 
@@ -877,7 +770,7 @@ Another important design decision is the use of QEMU for testing. Kernel modules
 
 The module also follows the original `kernel-playground` style by using per-network-namespace operations. This is why the module uses:
 
-```c id="ye2oq6"
+```c
 register_pernet_subsys(&lkm_netns_ops);
 ```
 
@@ -887,13 +780,13 @@ This design makes the module fit better with the repository style while still ke
 
 Overall, the project demonstrates how a Linux kernel module can use Netfilter to inspect IPv4 TCP traffic and log HTTP packet information at kernel level.
 
-## 10. Final Repository State
+## 9. Final Repository State
 
 The final project is kept in the root of the `kernel-playground` repository.
 
 The main implementation file is:
 
-```text id="e7wlek"
+```text
 kernel/modules/snf_lkm.c
 ```
 
@@ -901,64 +794,11 @@ This file contains the complete `snf_lkm` kernel module for M3 HTTP packet loggi
 
 The root README file is:
 
-```text id="y0o2bw"
+```text
 README.md
 ```
 
 This README is the main documentation for the project. It contains the project overview, environment explanation, design notes, implementation explanation, build steps, test steps, results, and evidence.
 
-No separate documentation file is used for this project. In particular, this project does not require a separate file such as:
-
-```text id="dw9aep"
-docs/m3-http-packet-logger.md
-```
-
-Screenshots and evidence images can be stored in:
-
-```text id="tu1m6e"
-docs/images/
-```
-
-The expected final repository structure for this delivery is:
-
-```text id="xdd415"
-kernel-playground/
-├── README.md
-├── kernel/
-│   └── modules/
-│       └── snf_lkm.c
-└── docs/
-    └── images/
-        ├── module-build.png
-        ├── module-loaded.png
-        ├── http-curl-test.png
-        └── http-packet-detected.png
-```
-
-The active development branch is:
-
-```text id="2d8gwl"
-m3-http-packet-logger
-```
-
-After the README, source code, and screenshots are complete, this branch can be pushed to my fork:
-
-```text id="c4ffje"
-https://github.com/Almutaz97/kernel-playground
-```
-
-Later, the branch can be merged into the `main` branch of my fork.
-
 The final project demonstrates a simple Linux Netfilter kernel module that detects IPv4 TCP HTTP packets on destination port `80`, logs packet information to the kernel log, and accepts all packets without blocking or modifying traffic.
-=======
-## Project overview
 
-This project is implemented inside the `kernel-playground` repository for the Software Networks Linux kernel/module project.
-
-The implemented work is an out-of-tree Linux kernel module based on the Netfilter subsystem. The module detects IPv4 TCP packets related to HTTP traffic on port `80`, logs useful packet information, and allows runtime blocking of selected source IP addresses through a `/proc` interface.
-
-The main module file is:
-
-```text
-kernel/modules/snf_lkm.c
->>>>>>> ee5b9a8 (Add HTTP netfilter blacklist module)
