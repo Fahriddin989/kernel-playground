@@ -35,9 +35,8 @@
   * [6.5 Check the Kernel Log Inside the VM](#65-check-the-kernel-log-inside-the-vm)
   * [6.6 Remove the Module](#66-remove-the-module)
 * [7. Results and Evidence](#7-results-and-evidence)
-* [8. Screenshots](#8-screenshots)
-* [9. Development Notes](#9-development-notes)
-* [10. Final Repository State](#10-final-repository-state)
+* [8. Development Notes](#9-development-notes)
+* [9. Final Repository State](#10-final-repository-state)
 
 ## 1. Project Overview
 
