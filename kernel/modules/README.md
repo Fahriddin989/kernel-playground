@@ -1,8 +1,5 @@
 # M6 — Destination IP Classifier Kernel Module
 
-**Student:** Fakhriddin Shamuratov  
-**Matricola:** 0363580  
-**Course:** Software Networks  
 **Project Level:** Basic Level  
 
 ---
