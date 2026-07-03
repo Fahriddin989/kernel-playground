@@ -65,12 +65,15 @@ if (first_octet >= 192 && first_octet <= 223)
         return "Class C";
 
 return "Other / Reserved";
+```
 5. Build Instructions
 
 From the repository root:
 
+```c
 cd kernel/modules
 make
+```
 
 The build creates the kernel module:
 
@@ -82,8 +85,9 @@ The Makefile also copies the compiled module to the shared VM folder.
 
 Inside the VM, load the module:
 
+```c
 insmod /mnt/shared/snf_lkm.ko
-
+```
 Expected log:
 
 M6 Basic: Destination IP Classifier loaded
@@ -98,8 +102,9 @@ This is normal for a custom kernel module compiled outside the official Linux ke
 
 Clear old logs:
 
+```c
 dmesg -C
-
+```
 Generate outgoing IPv4 packets:
 
 ping -c 1 8.8.8.8
@@ -111,9 +116,9 @@ A successful ping reply is not required. The goal is to generate outgoing packet
 8. Check Results
 
 Check the kernel log:
-
+```c
 dmesg | grep "M6 Basic"
-
+```
 Observed output:
 
 M6 Basic: destination 8.8.8.8 classified as Class A
@@ -125,16 +130,17 @@ This confirms that the module correctly classifies destination IPv4 addresses.
 9. Unload the Module
 
 Remove the module:
-
+```c
 rmmod snf_lkm
-
+```
 Check the final log:
-
+```c
 dmesg | tail -n 10
-
+```
 Expected output:
 
 M6 Basic: Destination IP Classifier unloaded
+
 10. Result
 
 The Basic Level implementation works correctly.
