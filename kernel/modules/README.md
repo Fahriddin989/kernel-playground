@@ -1,34 +1,25 @@
-# M6 — Destination IP Classifier (Kernel Module)
+# M6 — Destination IP Classifier Kernel Module
 
 **Student:** Fakhriddin Shamuratov  
 **Matricola:** 0363580  
 **Course:** Software Networks  
-**Level implemented:** Basic Level  
+**Project Level:** Basic Level  
 
 ---
 
-## 1. Project Goal
+## 1. Goal
 
-The goal of this project is to implement the **Basic Level** of project **M6 — Destination IP Classifier**.
+The goal of this project is to implement the **Basic Level** of **M6 — Destination IP Classifier**.
 
-The module intercepts outgoing IPv4 packets using a Netfilter hook, extracts the destination IP address from the IPv4 header, classifies the destination address according to the traditional IPv4 class system, and logs the result to the kernel log.
+The module intercepts outgoing IPv4 packets using a Netfilter hook, extracts the destination IP address, classifies it as **Class A**, **Class B**, **Class C**, or **Other / Reserved**, and logs the result to the kernel log.
 
-The implemented IPv4 destination classes are:
-
-| Class | Address range |
-|---|---|
-| Class A | 1.0.0.0 – 126.255.255.255 |
-| Class B | 128.0.0.0 – 191.255.255.255 |
-| Class C | 192.0.0.0 – 223.255.255.255 |
-| Other / Reserved | All other IPv4 ranges |
-
-The module does not drop, block, or modify packets. Every packet is accepted after inspection.
+The module only observes packets. It does not drop, block, or modify traffic.
 
 ---
 
-## 2. Files
+## 2. Project Files
 
-The project is implemented inside:
+The implementation is located in:
 
 ```text
 kernel/modules/
@@ -36,30 +27,38 @@ kernel/modules/
 Main files:
 
 snf_lkm.c   - Netfilter kernel module source code
-Makefile    - Builds the kernel module and copies the .ko file to the shared VM folder
+Makefile    - Builds the kernel module
 README.md   - Project documentation
 3. Implementation Overview
 
-The kernel module uses a Netfilter hook registered at:
+The module registers a Netfilter hook at:
 
 NF_INET_LOCAL_OUT
 
-This means the module inspects packets generated locally by the VM before they leave the network stack.
+This hook inspects locally generated outgoing IPv4 packets before they leave the Linux network stack.
 
-For every outgoing IPv4 packet, the module:
+For each packet, the module:
 
-Checks that the packet buffer exists.
-Ensures the IPv4 header is accessible.
-Reads the IPv4 header using ip_hdr(skb).
-Extracts the destination IP address from iph->daddr.
-Converts the destination address from network byte order to host byte order.
-Reads the first octet of the destination IP.
-Classifies the destination as Class A, Class B, Class C, or Other / Reserved.
-Logs the result with pr_info.
-Returns NF_ACCEPT, allowing the packet to continue normally.
-4. Classification Logic
+checks that the packet buffer exists;
+checks that the IPv4 header is accessible;
+reads the IPv4 header with ip_hdr(skb);
+extracts the destination IP address from iph->daddr;
+converts the address from network byte order to host byte order;
+reads the first octet;
+classifies the destination IP;
+logs the result with pr_info;
+returns NF_ACCEPT.
+4. IPv4 Classification Logic
 
-The classification is based on the first octet of the destination IPv4 address:
+The classification is based on the first octet of the destination IPv4 address.
+
+Class	First octet range	Example
+Class A	1–126	8.8.8.8
+Class B	128–191	172.217.16.14
+Class C	192–223	192.168.1.1
+Other / Reserved	Everything else	127.x.x.x, 224.x.x.x
+
+Code logic:
 
 if (first_octet >= 1 && first_octet <= 126)
         return "Class A";
@@ -71,70 +70,52 @@ if (first_octet >= 192 && first_octet <= 223)
         return "Class C";
 
 return "Other / Reserved";
-
-This satisfies the Basic Level requirement: identify packets by destination class.
-
 5. Build Instructions
 
-From the module directory:
+Build the kernel module from the module directory:
 
-cd /opt/kernel-playground/kernel/modules
+cd kernel/modules
 make
 
-The Makefile builds the kernel module using the kernel source tree linked as:
-
-kernel/modules/linux -> ../linux/
-
-After compilation, the module file is created:
+The build creates:
 
 snf_lkm.ko
 
-The Makefile also copies the compiled module to the shared VM folder:
-
-kernel/modules/shared
-
-This makes the module available inside the test VM.
+The Makefile also copies the compiled module to the shared VM folder.
 
 6. Load the Module Inside the VM
 
-Inside the VM, load the compiled module:
+Inside the VM, load the module:
 
 insmod /mnt/shared/snf_lkm.ko
 
-Expected kernel log:
+Expected log:
 
 M6 Basic: Destination IP Classifier loaded
 
-Note:
+The following message may also appear:
 
 loading out-of-tree module taints kernel
 
-This message is normal for a custom kernel module built outside the official Linux kernel tree.
+This is normal for a custom kernel module compiled outside the official Linux kernel tree.
 
 7. Generate Test Traffic
 
-The module uses the NF_INET_LOCAL_OUT hook, so locally generated outgoing packets are enough for testing.
-
-Run:
+Clear old logs:
 
 dmesg -C
+
+Generate outgoing IPv4 packets:
 
 ping -c 1 8.8.8.8
 ping -c 1 172.217.16.14
 ping -c 1 192.168.1.1
 
-These destinations were selected to test three different IPv4 classes:
+A successful ping reply is not required. The goal is to generate outgoing packets so the NF_INET_LOCAL_OUT hook can inspect them.
 
-Test destination	Expected class
-8.8.8.8	Class A
-172.217.16.14	Class B
-192.168.1.1	Class C
+8. Check Results
 
-A ping reply is not required for the test to be valid. The important part is that an outgoing packet is generated and inspected by the Netfilter hook.
-
-8. Check the Kernel Log
-
-After running the test pings:
+Check the kernel log:
 
 dmesg | grep "M6 Basic"
 
@@ -144,21 +125,21 @@ M6 Basic: destination 8.8.8.8 classified as Class A
 M6 Basic: destination 172.217.16.14 classified as Class B
 M6 Basic: destination 192.168.1.1 classified as Class C
 
-This confirms that the module correctly extracts destination IPv4 addresses and classifies them.
+This confirms that the module correctly classifies destination IPv4 addresses.
 
 9. Unload the Module
 
-To remove the module:
+Remove the module:
 
 rmmod snf_lkm
+
+Check the final log:
+
 dmesg | tail -n 10
 
 Expected output:
 
 M6 Basic: Destination IP Classifier unloaded
-
-This confirms that the Netfilter hook was unregistered correctly.
-
 10. Result
 
 The Basic Level implementation works correctly.
@@ -167,38 +148,38 @@ The module successfully:
 
 loads into the kernel;
 registers a Netfilter hook;
-intercepts locally generated outgoing IPv4 packets;
-extracts the destination IP address;
+intercepts outgoing IPv4 packets;
+extracts destination IP addresses;
 classifies destination IPs as Class A, Class B, or Class C;
-logs the classification result to dmesg;
-accepts all packets without modifying or dropping them;
+logs the result to dmesg;
+accepts all packets with NF_ACCEPT;
 unloads cleanly.
 11. Limitations
 
-This implementation intentionally focuses only on the Basic Level.
+This project implements only the Basic Level.
 
 It does not implement:
 
-per-class counters;
-/proc or user-space statistics;
+packet counters per class;
+/proc statistics;
 IPv6 prefix classification;
 traffic shaping;
 packet dropping.
 
-These features belong to the Intermediate or Advanced levels and were not required for this submission.
+These features belong to the Intermediate and Advanced levels and were not required for this submission.
 
-12. Final Summary
+Final Packet Flow
 Outgoing packet generated
 ↓
-Netfilter LOCAL_OUT hook receives packet
+NF_INET_LOCAL_OUT hook receives packet
 ↓
-IPv4 header is extracted
+IPv4 header is checked
 ↓
-Destination IP address is read
+Destination IP is extracted
 ↓
-First octet is checked
+First octet is read
 ↓
-Destination is classified as Class A / B / C / Other
+Destination class is selected
 ↓
 Result is written to dmesg
 ↓
