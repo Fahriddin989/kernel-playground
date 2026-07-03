@@ -1,62 +1,60 @@
 # M6 — Destination IP Classifier Kernel Module
 
 **Project Level:** Basic Level  
-
----
+**Project Type:** Netfilter Kernel Module  
 
 ## 1. Goal
 
-The goal of this project is to implement the **Basic Level** of **M6 — Destination IP Classifier**.
+The goal of this project is to implement the Basic Level of **M6 — Destination IP Classifier**.
 
 The module intercepts outgoing IPv4 packets using a Netfilter hook, extracts the destination IP address, classifies it as **Class A**, **Class B**, **Class C**, or **Other / Reserved**, and logs the result to the kernel log.
 
 The module only observes packets. It does not drop, block, or modify traffic.
 
----
-
 ## 2. Project Files
 
-The implementation is located in:
-
-```text
-kernel/modules/
+The implementation is located in `kernel/modules/`.
 
 Main files:
 
-snf_lkm.c   - Netfilter kernel module source code
-Makefile    - Builds the kernel module
-README.md   - Project documentation
-3. Implementation Overview
+| File | Purpose |
+|---|---|
+| `snf_lkm.c` | Netfilter kernel module source code |
+| `Makefile` | Builds the kernel module |
+| `README.md` | Project documentation |
 
-The module registers a Netfilter hook at:
+## 3. Implementation Overview
 
-NF_INET_LOCAL_OUT
+The module registers a Netfilter hook at `NF_INET_LOCAL_OUT`.
 
 This hook inspects locally generated outgoing IPv4 packets before they leave the Linux network stack.
 
 For each packet, the module:
 
-checks that the packet buffer exists;
-checks that the IPv4 header is accessible;
-reads the IPv4 header with ip_hdr(skb);
-extracts the destination IP address from iph->daddr;
-converts the address from network byte order to host byte order;
-reads the first octet;
-classifies the destination IP;
-logs the result with pr_info;
-returns NF_ACCEPT.
-4. IPv4 Classification Logic
+1. checks that the packet buffer exists;
+2. checks that the IPv4 header is accessible;
+3. reads the IPv4 header with `ip_hdr(skb)`;
+4. extracts the destination IP address from `iph->daddr`;
+5. converts the address from network byte order to host byte order;
+6. reads the first octet;
+7. classifies the destination IP;
+8. logs the result with `pr_info`;
+9. returns `NF_ACCEPT`.
+
+## 4. IPv4 Classification Logic
 
 The classification is based on the first octet of the destination IPv4 address.
 
-Class	First octet range	Example
-Class A	1–126	8.8.8.8
-Class B	128–191	172.217.16.14
-Class C	192–223	192.168.1.1
-Other / Reserved	Everything else	127.x.x.x, 224.x.x.x
+| Class | First octet range | Example |
+|---|---|---|
+| Class A | 1–126 | `8.8.8.8` |
+| Class B | 128–191 | `172.217.16.14` |
+| Class C | 192–223 | `192.168.1.1` |
+| Other / Reserved | Everything else | `127.x.x.x`, `224.x.x.x` |
 
 Code logic:
 
+```c
 if (first_octet >= 1 && first_octet <= 126)
         return "Class A";
 
@@ -69,12 +67,12 @@ if (first_octet >= 192 && first_octet <= 223)
 return "Other / Reserved";
 5. Build Instructions
 
-Build the kernel module from the module directory:
+From the repository root:
 
 cd kernel/modules
 make
 
-The build creates:
+The build creates the kernel module:
 
 snf_lkm.ko
 
@@ -165,6 +163,12 @@ packet dropping.
 
 These features belong to the Intermediate and Advanced levels and were not required for this submission.
 
+12. Full Report
+
+The full project report is available here:
+
+Open Google Docs Report
+
 Final Packet Flow
 Outgoing packet generated
 ↓
@@ -181,4 +185,3 @@ Destination class is selected
 Result is written to dmesg
 ↓
 Packet is accepted with NF_ACCEPT
-
